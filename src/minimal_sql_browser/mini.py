@@ -1,18 +1,27 @@
 import sys
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
-                             QTextEdit, QTableView, QComboBox, 
-                             QLabel, QSplitter, QSizePolicy)
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
+                             QTextEdit, QTableView, QComboBox,
+                             QLabel, QSplitter, QSizePolicy, QFileDialog, QAction)
 from PyQt5.QtSql import QSqlDatabase, QSqlQuery, QSqlQueryModel
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QFont
 
 class MiniSqlApp(QMainWindow):
     def __init__(self, db_path):
         super().__init__()
         self.setWindowTitle(f"SQLite Viewer - {db_path}")
-        
+
         # Global Font 12pt
-        self.setFont(QFont("Segoe UI", 12))
+        self.setFont(QFont("Segoe UI", 18))
+
+
+        # Menu Bar
+        menubar = self.menuBar()
+        file_menu = menubar.addMenu("File")
+        open_action = QAction("Open Database", self)
+        open_action.triggered.connect(self.open_database_dialog)
+        file_menu.addAction(open_action)
+
 
         self.db = QSqlDatabase.addDatabase("QSQLITE")
         self.db.setDatabaseName(db_path)
@@ -70,6 +79,11 @@ class MiniSqlApp(QMainWindow):
         self.refresh_table_list()
         self.refresh_full_view()
 
+    def open_database_dialog(self):
+        path, _ = QFileDialog.getOpenFileName(self, "Open SQLite Database", "", "SQLite DB Files (*.db *.sqlite *.sqlite3);;All Files (*)")
+        if path:
+            self.open_database(path)
+
     def keyPressEvent(self, event):
         if event.key() in (Qt.Key_Return, Qt.Key_Enter) and event.modifiers() == Qt.ControlModifier:
             self.run_query()
@@ -110,7 +124,27 @@ class MiniSqlApp(QMainWindow):
         table = self.table_selector.currentText()
         if table: self.full_model.setQuery(f"SELECT * FROM {table}")
 
-if __name__ == "__main__":
+    def open_database(self, db_path):
+        # Close current DB connection
+        self.db.close()
+        QSqlDatabase.removeDatabase(self.db.connectionName())
+        # Open new DB
+        self.db = QSqlDatabase.addDatabase("QSQLITE")
+        self.db.setDatabaseName(db_path)
+        if not self.db.open():
+            self.info_output.setText(f"Failed to open: {db_path}\n" + self.info_output.toPlainText())
+            self.info_output.setStyleSheet("background: #fdfdfd; color: #d32f2f;")
+            return
+        self.setWindowTitle(f"SQLite Viewer - {db_path}")
+        self.refresh_table_list()
+        self.query_model.clear()
+        self.full_model.clear()
+        self.info_output.setText(f"Opened: {db_path}\n" + self.info_output.toPlainText())
+        self.info_output.setStyleSheet("background: #fdfdfd; color: #2e7d32;")
+        QTimer.singleShot(50, self.refresh_full_view)
+
+
+def main():
     target_db = sys.argv[1] if len(sys.argv) > 1 else "data.db"
     app = QApplication(sys.argv)
     window = MiniSqlApp(target_db)
@@ -118,3 +152,5 @@ if __name__ == "__main__":
     window.show()
     sys.exit(app.exec_())
 
+if __name__ == "__main__":
+    main()
