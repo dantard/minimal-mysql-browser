@@ -1,12 +1,13 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='msb',
-    version='0.0.4',
+    name='minimal_sqlite_browser',
+    version='0.0.5',
     packages=find_packages(where='src'),  # Specify src directory
     package_dir={'': 'src'},  # Tell setuptools that packages are under src
     install_requires=[
         'pyqt5',
+        'watchdog',
     ],
     author='Danilo Tardioli',
     author_email='dantard@unizar.es',
@@ -22,7 +23,7 @@ setup(
     python_requires='>=3.10',
     entry_points={
         'console_scripts': [
-            'msb=minimal_sql_browser.mini:main',
+            'msb=minimal_sql_browser.miniwd:main',
         ],
     },
 )

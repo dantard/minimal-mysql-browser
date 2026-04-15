@@ -3,10 +3,12 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QTextEdit, QTableView, QComboBox,
                              QLabel, QSplitter, QSizePolicy, QFileDialog, QAction)
 from PyQt5.QtSql import QSqlDatabase, QSqlQuery, QSqlQueryModel
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 from PyQt5.QtGui import QFont
 
-class MiniSqlApp(QMainWindow):
+class MiniSqlApp(QWidget):
+    focus_in = pyqtSignal(object)
+
     def __init__(self, db_path):
         super().__init__()
         self.setWindowTitle(f"SQLite Viewer - {db_path}")
@@ -14,18 +16,11 @@ class MiniSqlApp(QMainWindow):
         # Global Font 12pt
         self.setFont(QFont("Segoe UI", 18))
 
+        if db_path is not None:
+            self.db = QSqlDatabase.addDatabase("QSQLITE")
+            self.db.setDatabaseName(db_path)
 
-        # Menu Bar
-        menubar = self.menuBar()
-        file_menu = menubar.addMenu("File")
-        open_action = QAction("Open Database", self)
-        open_action.triggered.connect(self.open_database_dialog)
-        file_menu.addAction(open_action)
-
-
-        self.db = QSqlDatabase.addDatabase("QSQLITE")
-        self.db.setDatabaseName(db_path)
-        if not self.db.open(): print(f"DB Error: {db_path}")
+            if not self.db.open(): print(f"DB Error: {db_path}")
 
         main_splitter = QSplitter(Qt.Vertical)
         
@@ -68,14 +63,18 @@ class MiniSqlApp(QMainWindow):
         self.full_view = QTableView()
         self.full_model = QSqlQueryModel()
         self.full_view.setModel(self.full_model)
-        wat_l.addWidget(QLabel("Table Watcher:")); wat_l.addWidget(self.table_selector); wat_l.addWidget(self.full_view)
+        wat_l.addWidget(QLabel("Table Watcher:"));
+        wat_l.addWidget(self.table_selector);
+        wat_l.addWidget(self.full_view)
         table_splitter.addWidget(wat_w)
 
         main_splitter.addWidget(table_splitter)
         main_splitter.setStretchFactor(0, 1)
         main_splitter.setStretchFactor(1, 2)
         
-        self.setCentralWidget(main_splitter)
+        #self.setCentralWidget(main_splitter)
+        self.setLayout(QVBoxLayout())
+        self.layout().addWidget(main_splitter)
         self.refresh_table_list()
         self.refresh_full_view()
 
@@ -143,11 +142,45 @@ class MiniSqlApp(QMainWindow):
         self.info_output.setStyleSheet("background: #fdfdfd; color: #2e7d32;")
         QTimer.singleShot(50, self.refresh_full_view)
 
+    def set_dark_mode(self, enabled):
+        if enabled:
+            self.setStyleSheet("""
+                QWidget { background: #2b2b2b; color: #f0f0f0; }
+                QTableView { background: #3c3c3c; }
+                QTextEdit { background: #3c3c3c; }
+                QComboBox { background: #3c3c3c; }
+            """)
+        else:
+            self.setStyleSheet("")
+
+    def update_config(self):
+        pass
+
+    def is_selectable(self):
+        return False
+
+    def on_disk(self):
+        return False
+
+class MainWindow(QMainWindow):
+    def __init__(self, db):
+        super().__init__()
+        self.mini_app = MiniSqlApp(db)
+        self.setCentralWidget(self.mini_app)
+
+        # Menu
+        menubar = self.menuBar()
+        file_menu = menubar.addMenu("File")
+        open_action = QAction("Open Database...", self)
+        open_action.triggered.connect(self.mini_app.open_database_dialog)
+        file_menu.addAction(open_action)
+
+        self.setCentralWidget(self.mini_app)
 
 def main():
     target_db = sys.argv[1] if len(sys.argv) > 1 else "data.db"
     app = QApplication(sys.argv)
-    window = MiniSqlApp(target_db)
+    window = MainWindow(target_db)
     window.resize(1200, 900)
     window.show()
     sys.exit(app.exec_())
