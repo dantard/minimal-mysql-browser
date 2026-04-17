@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='minimal_sqlite_browser',
-    version='0.0.5',
+    version='0.0.7',
     packages=find_packages(where='src'),  # Specify src directory
     package_dir={'': 'src'},  # Tell setuptools that packages are under src
     install_requires=[
@@ -23,7 +23,7 @@ setup(
     python_requires='>=3.10',
     entry_points={
         'console_scripts': [
-            'msb=minimal_sql_browser.miniwd:main',
+            'msb=minimal_sql_browser.msb:main',
         ],
     },
 )
